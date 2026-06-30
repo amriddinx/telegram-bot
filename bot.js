@@ -5,12 +5,9 @@ const path = require('path');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Admin Telegram ID raqami
 const ADMIN_ID = '8041853599';
 
 const ORDERS_FILE = path.join(__dirname, 'orders.json');
-
-// ============ ORDERS.JSON BILAN ISHLASH ============
 
 function loadOrders() {
   if (!fs.existsSync(ORDERS_FILE)) {
@@ -25,8 +22,6 @@ function saveOrder(order) {
   orders.push(order);
   fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
 }
-
-// ============ FAQ MA'LUMOTLARI ============
 
 const faqData = {
   'narx': `💰 Bizning xizmatlar narxi:
@@ -52,7 +47,13 @@ Shu narsalar kerak bo'lsa, menga yozing!`,
 Loyihangiz haqida yozing — maslahat beramiz!`,
 };
 
-// ============ BUYURTMA SCENE (QADAM-BAQADAM SAVOLLAR) ============
+const mainMenu = Markup.keyboard([
+  ['🤖 Bu BOT nima qila oladi'],
+  ['💰 Narxlar', '⚠️ Xizmatlar'],
+  ['📍 Manzil', '🕐 Ish vaqti'],
+  ['🛒 Buyurtma berish'],
+  ['ℹ️ Yordam']
+]).resize();
 
 const orderScene = new Scenes.WizardScene(
   'ORDER_SCENE',
@@ -69,7 +70,7 @@ const orderScene = new Scenes.WizardScene(
   },
   (ctx) => {
     if (ctx.message.text === '❌ Bekor qilish') {
-      ctx.reply('Buyurtma bekor qilindi.', Markup.removeKeyboard());
+      ctx.reply('Buyurtma bekor qilindi.', mainMenu);
       return ctx.scene.leave();
     }
     ctx.wizard.state.service = ctx.message.text;
@@ -98,7 +99,7 @@ const orderScene = new Scenes.WizardScene(
       id: Date.now(),
       date: new Date().toLocaleString('uz-UZ'),
       userId: ctx.from.id,
-      username: ctx.from.username || 'mavjud emas',
+      username: ctx.from.username || '',
       firstName: ctx.from.first_name,
       service: ctx.wizard.state.service,
       details: ctx.wizard.state.details,
@@ -113,13 +114,13 @@ const orderScene = new Scenes.WizardScene(
       `📝 Tafsilot: ${order.details}\n` +
       `📞 Telefon: ${order.phone}\n\n` +
       `Tez orada siz bilan bog'lanamiz!`,
-      Markup.removeKeyboard()
+      mainMenu
     );
 
     ctx.telegram.sendMessage(
       ADMIN_ID,
       `🆕 YANGI BUYURTMA!\n\n` +
-      `👤 Mijoz: ${order.firstName} (@${order.username})\n` +
+      `👤 Mijoz: ${order.firstName}${order.username ? ' (@' + order.username + ')' : ''}\n` +
       `🆔 ID: ${order.userId}\n` +
       `🛒 Xizmat: ${order.service}\n` +
       `📝 Tafsilot: ${order.details}\n` +
@@ -136,18 +137,10 @@ const stage = new Scenes.Stage([orderScene]);
 bot.use(session());
 bot.use(stage.middleware());
 
-// ============ ASOSIY BUYRUQLAR ============
-
 bot.start((ctx) => {
   ctx.reply(
     `Salom, ${ctx.from.first_name}! 👋\n\nAmriddinX IT xizmatlariga xush kelibsiz!\nQuyidagi tugmalardan birini tanlang:`,
-    Markup.keyboard([
-      ['🤖 Bu BOT nima qila oladi'],
-      ['💰 Narxlar', '⚠️ Xizmatlar'],
-      ['📍 Manzil', '🕐 Ish vaqti'],
-      ['🛒 Buyurtma berish'],
-      ['ℹ️ Yordam']
-    ]).resize()
+    mainMenu
   );
 });
 
@@ -174,10 +167,8 @@ bot.hears('ℹ️ Yordam', (ctx) =>
   )
 );
 
-// Buyurtma berish tugmasi scene'ni ishga tushiradi
 bot.hears('🛒 Buyurtma berish', (ctx) => ctx.scene.enter('ORDER_SCENE'));
 
-// Admin uchun: barcha buyurtmalarni ko'rish
 bot.command('orders', (ctx) => {
   if (String(ctx.from.id) !== String(ADMIN_ID)) {
     return;
@@ -189,7 +180,7 @@ bot.command('orders', (ctx) => {
   const last10 = orders.slice(-10).reverse();
   let text = `📋 Oxirgi ${last10.length} ta buyurtma:\n\n`;
   last10.forEach((o) => {
-    text += `🆔 ${o.id}\n👤 ${o.firstName} (@${o.username})\n🛒 ${o.service}\n📝 ${o.details}\n📞 ${o.phone}\n🕐 ${o.date}\n\n`;
+    text += `🆔 ${o.id}\n👤 ${o.firstName}${o.username ? ' (@' + o.username + ')' : ''}\n🛒 ${o.service}\n📝 ${o.details}\n📞 ${o.phone}\n🕐 ${o.date}\n\n`;
   });
   ctx.reply(text);
 });
