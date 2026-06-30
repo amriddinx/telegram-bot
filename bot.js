@@ -1,4 +1,4 @@
-require('dotenv').config();
+
 const { Telegraf, session, Scenes } = require('telegraf');
 const { ADMIN_ID, loadOrders, faqData, mainMenu, orderScene } = require('./script.js');
 
